@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "upstreamBase": "9f33bd92ba55fbd8749c4849e8df9cedae9aa471",
+  "contributionCommit": "4f0e89b65e8d3f364e767029ff9e5f4127c2f8b2",
+  "cloudExecutionApproved": false,
+  "dependencyScriptsReviewed": false,
+  "candidatePackagingApproved": false,
+  "localRunAuthorized": false,
+  "binaryUploadAuthorized": false,
+  "applicationId": "com.shotloom.localtest.batch09",
+  "diskReserveGiB": 10,
+  "workspaceCapGiB": 8,
+  "stageTimeoutMinutes": 25,
+  "lockHashMode": "SHA256 UTF-8 bytes with CRLF normalized to LF",
+  "lockSha256": {
+    "package-lock.json": "c5bc739128dcc71eb85f77656f36e35b82ca27fea1e09667367d9ff9b30cd2a9",
+    "harness/host/package-lock.json": "00a400025d1ad5e8fa99b92c7166e04008c82b9051be5ff0833881592bfc4ef1",
+    "vendor/shotloom-director-desk/package-lock.json": "9397e773ae79ffeea9ef44670ed0ee75ffbb7a9eb2b4847ba9a9bb3c8a2f0073",
+    "vendor/openreel/package.json": "ce7a00ef7b23be3b464e57a7a2d0ecc0d8149527ebbb912664e87d1a6d25ecfa",
+    "vendor/openreel/pnpm-lock.yaml": "86eb910867eaacd94cd93c6073d0ed87ea614e57ddb3ca831a25b2536d60e569",
+    "vendor/openreel/pnpm-workspace.yaml": "19efff9d8347852b65397d9f8a4ad9b1c2cb6e930c765c0fa935c9bfb2b8cb10",
+    ".node-version": "3151949a8b43e7df5385b69fbaeb5652bbdc7f7924e4278d550348f42b103f13"
+  },
+  "sourceSha256": {
+    "electron/main.ts": "4d7c9a4aa2e1533f0b161dfa05bc3bb2c19ae881439d2d7666b8e5e8d2c06d13",
+    "electron/core/paths.ts": "2b1c5d8ee3d9a12a61890d7e1251ae3a2965f31975fe0514fb184d2475fa4f4f",
+    "electron/core/updater.ts": "d4388d68b122530a796096c4bcb5d37f8c60e3a92df83e5698aa5c6f6e116751",
+    "scripts/electron-package.mjs": "3210a229b7bd86b58942acf948486cba03066a6f0f164dbd4bf94622bd90ecdf"
+  }
+}

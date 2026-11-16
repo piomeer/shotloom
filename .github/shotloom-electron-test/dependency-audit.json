@@ -1,0 +1,105 @@
+{
+  "package-lock.json": {
+    "packageEntries": 571,
+    "origins": {
+      "registry.npmjs.org": 570
+    },
+    "installScriptOrElectronEntries": [
+      {
+        "package": "node_modules/electron",
+        "version": "44.10.2",
+        "resolved": "https://registry.npmjs.org/electron/-/electron-44.10.2.tgz",
+        "integrity": "sha512-Bz+GV+9Xj++3RW95NYfzp5Wgivf61BgWTPBxYTOUETytVB1uLUAOdSM39Dn/V3PGYeGTE6LYeCTR5SCiu3BR2A=="
+      },
+      {
+        "package": "node_modules/electron-winstaller",
+        "version": "5.4.0",
+        "resolved": "https://registry.npmjs.org/electron-winstaller/-/electron-winstaller-5.4.0.tgz",
+        "integrity": "sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg=="
+      },
+      {
+        "package": "node_modules/esbuild",
+        "version": "0.28.1",
+        "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.28.1.tgz",
+        "integrity": "sha512-HrJrvZv5ayxBzPfwphOoNzkzOIIlifzk0KJrGK2c8R4+LKpMtpYLQeUdjnwjWv/LZlkH2laZk+4w78pi99D4Vw=="
+      },
+      {
+        "package": "node_modules/ffmpeg-static",
+        "version": "5.3.0",
+        "resolved": "https://registry.npmjs.org/ffmpeg-static/-/ffmpeg-static-5.3.0.tgz",
+        "integrity": "sha512-H+K6sW6TiIX6VGend0KQwthe+kaceeH/luE8dIZyOP35ik7ahYojDuqlTV1bOrtEwl01sy2HFNGQfi5IDJvotg=="
+      },
+      {
+        "package": "node_modules/fsevents",
+        "version": "2.3.3",
+        "resolved": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz",
+        "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="
+      }
+    ]
+  },
+  "harness/host/package-lock.json": {
+    "packageEntries": 485,
+    "origins": {
+      "registry.npmmirror.com": 417,
+      "registry.npmjs.org": 67
+    },
+    "installScriptOrElectronEntries": [
+      {
+        "package": "node_modules/@deepseek-ai/dsh-subprocess-local",
+        "version": "0.2.1-alpha.2",
+        "resolved": "https://registry.npmjs.org/@deepseek-ai/dsh-subprocess-local/-/dsh-subprocess-local-0.2.1-alpha.2.tgz",
+        "integrity": "sha512-dxMYxgssdKLRGaEFjK3NICylcsg7gfDW4M3ZjKpu5uocIhZaCg819B5Rla+u2bbixADT8yE0e54EN0k9mPPSMg=="
+      },
+      {
+        "package": "node_modules/@google/genai",
+        "version": "2.21.0",
+        "resolved": "https://registry.npmmirror.com/@google/genai/-/genai-2.21.0.tgz",
+        "integrity": "sha512-+PDtco2/Z0ONdzCGekCoCT+O1VJS9xJQNN4XzQpXG/t3El/SWWMkCWlFRO1KmivOHPa4Q0VjUYu1HBKCZ/v33Q=="
+      },
+      {
+        "package": "node_modules/esbuild",
+        "version": "0.28.1",
+        "resolved": "https://registry.npmmirror.com/esbuild/-/esbuild-0.28.1.tgz",
+        "integrity": "sha512-HrJrvZv5ayxBzPfwphOoNzkzOIIlifzk0KJrGK2c8R4+LKpMtpYLQeUdjnwjWv/LZlkH2laZk+4w78pi99D4Vw=="
+      },
+      {
+        "package": "node_modules/koffi",
+        "version": "3.1.1",
+        "resolved": "https://registry.npmmirror.com/koffi/-/koffi-3.1.1.tgz",
+        "integrity": "sha512-mRX6AMeeKCxSOeOopqAcLAl5jcNvge7NAG8l7rF/8gGJATI0tdHFYjteIdE0mGOtWdsrJOij+PjnP8Q9c1gwgA=="
+      },
+      {
+        "package": "node_modules/node-pty",
+        "version": "1.2.0-beta.15",
+        "resolved": "https://registry.npmjs.org/node-pty/-/node-pty-1.2.0-beta.15.tgz",
+        "integrity": "sha512-vORSzHXi4Ofl7HemVWpuudLqCPdaQb4LfpRCUpE5HPxhp4JYscl8zZwxh11p26v2wvW24WMwnMfLjhRLixrfxA=="
+      },
+      {
+        "package": "node_modules/protobufjs",
+        "version": "7.6.6",
+        "resolved": "https://registry.npmmirror.com/protobufjs/-/protobufjs-7.6.6.tgz",
+        "integrity": "sha512-dYDWdjSl5RNb7SgPxGQcRU+GtvP7s2fpkrY0r432PcOIaZ0/rBcxEZnQN67iJhFuQiVw754JDoPruPCNdGsbjg=="
+      }
+    ]
+  },
+  "vendor/shotloom-director-desk/package-lock.json": {
+    "packageEntries": 134,
+    "origins": {
+      "registry.npmjs.org": 133
+    },
+    "installScriptOrElectronEntries": [
+      {
+        "package": "node_modules/fsevents",
+        "version": "2.3.3",
+        "resolved": "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz",
+        "integrity": "sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw=="
+      }
+    ]
+  },
+  "openreel": {
+    "packageManager": "pnpm@11.7.0",
+    "frozenLockfile": true,
+    "wasmCompiler": "AssemblyScript asc (no Rust/emscripten)",
+    "buildScriptReviewComplete": false
+  }
+}

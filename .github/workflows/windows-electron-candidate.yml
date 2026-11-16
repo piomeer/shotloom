@@ -1,0 +1,134 @@
+{
+  "name": "Windows Electron candidate (local-test only)",
+  "on": {
+    "push": {
+      "branches": [
+        "test/windows-electron-candidate"
+      ]
+    }
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "concurrency": {
+    "group": "batch09-${{ github.ref }}",
+    "cancel-in-progress": false
+  },
+  "jobs": {
+    "candidate": {
+      "if": "github.repository == 'piomeer/shotloom' && github.ref == 'refs/heads/test/windows-electron-candidate' && github.event_name == 'push'",
+      "runs-on": "windows-2022",
+      "timeout-minutes": 90,
+      "defaults": {
+        "run": {
+          "shell": "pwsh"
+        }
+      },
+      "env": {
+        "CI": "true",
+        "CSC_IDENTITY_AUTO_DISCOVERY": "false",
+        "ELECTRON_SKIP_BINARY_DOWNLOAD": "1",
+        "npm_config_registry": "https://registry.npmjs.org/",
+        "npm_config_audit": "false",
+        "npm_config_fund": "false",
+        "npm_config_update_notifier": "false",
+        "npm_config_cache": "${{ github.workspace }}\\tmp\\batch09\\npm-cache",
+        "npm_config_store_dir": "${{ github.workspace }}\\tmp\\batch09\\pnpm-store",
+        "ELECTRON_CACHE": "${{ github.workspace }}\\tmp\\batch09\\electron-cache",
+        "ELECTRON_BUILDER_CACHE": "${{ github.workspace }}\\tmp\\batch09\\builder-cache",
+        "TEMP": "${{ github.workspace }}\\tmp\\batch09\\temp",
+        "TMP": "${{ github.workspace }}\\tmp\\batch09\\temp",
+        "electron_config_cache": "${{ github.workspace }}\\tmp\\batch09\\electron-cache"
+      },
+      "steps": [
+        {
+          "name": "Checkout this exact test commit",
+          "uses": "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+          "with": {
+            "persist-credentials": false,
+            "fetch-depth": 0,
+            "ref": "${{ github.sha }}"
+          }
+        },
+        {
+          "name": "Read runner CPU, RAM, disks and preinstalled tools",
+          "shell": "pwsh",
+          "run": "./.github/shotloom-electron-test/inventory.ps1"
+        },
+        {
+          "name": "Set exact project Node",
+          "uses": "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+          "with": {
+            "node-version-file": ".node-version",
+            "check-latest": false
+          }
+        },
+        {
+          "name": "Require explicit execution approval and exact source locks",
+          "run": "node .github/shotloom-electron-test/ci.mjs authorize"
+        },
+        {
+          "name": "Root lockfile dependencies without install scripts",
+          "run": "node .github/shotloom-electron-test/ci.mjs root-deps"
+        },
+        {
+          "name": "Recovery public-behavior tests (22 required)",
+          "run": "node .github/shotloom-electron-test/ci.mjs focused"
+        },
+        {
+          "name": "Electron typecheck",
+          "run": "node .github/shotloom-electron-test/ci.mjs typecheck"
+        },
+        {
+          "name": "Related Electron runtime and storage regressions",
+          "run": "node .github/shotloom-electron-test/ci.mjs related"
+        },
+        {
+          "name": "Test architecture",
+          "run": "node .github/shotloom-electron-test/ci.mjs architecture"
+        },
+        {
+          "name": "Install exact locked Electron distribution using its checked-in package installer",
+          "run": "node .github/shotloom-electron-test/ci.mjs electron-dist"
+        },
+        {
+          "name": "Approved locked FFmpeg installation script",
+          "run": "node .github/shotloom-electron-test/ci.mjs native-root"
+        },
+        {
+          "name": "Approved locked Host and native dependencies",
+          "run": "node .github/shotloom-electron-test/ci.mjs host-deps"
+        },
+        {
+          "name": "Director lockfile dependencies",
+          "run": "node .github/shotloom-electron-test/ci.mjs director-deps"
+        },
+        {
+          "name": "Pinned OpenReel pnpm workspace",
+          "run": "node .github/shotloom-electron-test/ci.mjs openreel"
+        },
+        {
+          "name": "Prepare disposable candidate-only isolation config",
+          "run": "node .github/shotloom-electron-test/ci.mjs prepare"
+        },
+        {
+          "name": "Typecheck candidate-only bootstrap and updater",
+          "run": "node .github/shotloom-electron-test/ci.mjs candidate-typecheck"
+        },
+        {
+          "name": "Official directory packaging (no installer/publish)",
+          "run": "node .github/shotloom-electron-test/ci.mjs package"
+        },
+        {
+          "name": "Inspect complete resource closure and local SHA256 manifest",
+          "run": "node .github/shotloom-electron-test/ci.mjs resources"
+        },
+        {
+          "name": "Print sanitized validation summary only",
+          "if": "always()",
+          "run": "node .github/shotloom-electron-test/ci.mjs summary"
+        }
+      ]
+    }
+  }
+}
