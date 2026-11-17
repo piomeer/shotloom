@@ -22,6 +22,8 @@
 
 ## 官方 Harness 客户端隔离
 
+Agent Host 发行资源由 `scripts/prepare-harness.mjs` 在临时目录准备后原子替换。依赖按锁文件中的 `dev` 标记排除纯开发包及其命令入口，保留生产依赖和许可证；不复制依赖的 JS 源码映射、类型声明及其他平台的 node-pty 预编译文件。只精简发行副本，不修改开发依赖目录；变更后运行资源装配测试和 `npm run harness:verify-package`。
+
 `harness/host/client/` 直接复用官方 Harness 的 UI、状态、投影与 React 依赖，以 App 级单例运行时在 Shotloom 页面内挂载，使用 ShadowRoot 隔离样式，不使用 iframe。它不接管 Shotloom 领域状态，不导入 renderer/store，不将官方状态引擎扩散到产品模块。桌面客户端通过原生 IPC 与父进程私有管道连接 Host，不使用 Cookie 登录或浏览器认证跳转；原生调用边界、项目绑定、Tool Bridge 和工具权限校验继续生效。切换项目只切换会话，工具、Skill、模型配置内容未变时不得重复复制或挂载。产品导航和画布引用通过显式适配接口协作；renderer 内仍严格遵守以上两类状态引擎约定。
 
 ## Agent 工具的暴露与可见性
@@ -50,6 +52,12 @@
 插件开发、打包与索引格式见 [provider-plugins.md](./provider-plugins.md)。
 
 媒体协议的路径占位符、独立结果查询、远程取消和缺省状态约束见 [媒体协议接入](./media-protocols.md)。这些是厂商传输契约，不用于推断 Agent 的制作意图或工作流。
+
+## 桌面签名与测试版本
+
+macOS 试包也必须有完整签名：`electron-package.mjs` 使用 `CSC_NAME` 指定的证书，未配置时显式使用 `-` 做临时签名；关闭证书自动发现不能代替签名。发行流程对所有 Mac 包执行深度严格签名验证。临时签名不等于 Developer ID 签名或 Apple 公证，不能宣称已通过 Gatekeeper 的分发信任检查。
+
+插件兼容范围在 renderer 与 Electron 中均使用 semver 的 `includePrerelease` 选项，使兼容范围内的 `0.9.2-testxxxx` 等测试版本可加载插件；仍须保留范围上下界校验。
 
 ## Electron 数据存储
 

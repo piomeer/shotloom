@@ -17,6 +17,7 @@ test('release versions accept stable/prerelease tags and reject unsafe or ambigu
   assert.deepEqual(releaseVersion('v1.2.3'), { version: '1.2.3', tag: 'v1.2.3', prerelease: false });
   assert.deepEqual(releaseVersion('0.8.1'), { version: '0.8.1', tag: '0.8.1', prerelease: false });
   assert.equal(releaseVersion('1.2.3-beta.1').prerelease, true);
+  assert.deepEqual(releaseVersion('0.9.2-test20261117'), { version: '0.9.2-test20261117', tag: '0.9.2-test20261117', prerelease: true });
   for (const version of ['1.2', 'v01.2.3', '1.2.3-beta.01', '1.2.3+build', '1.2.3\n', '--latest', '../1.2.3']) {
     assert.throws(() => releaseVersion(version));
   }
@@ -72,6 +73,27 @@ test('electron-builder artifacts stage per platform with update metadata and che
     assert.equal(await sha256(join(directory, name)), digest, name);
   }
   assert.ok(staged.every(file => !file.includes('.manifest.json')));
+}));
+
+test('Windows staging excludes executables and metadata inside the unpacked application', () => fixture(async root => {
+  const target = targets.find(item => item.platform === 'windows-x86_64');
+  const bundle = join(root, target.platform);
+  const payload = join(bundle, 'win-unpacked', 'resources');
+  await mkdir(payload, { recursive: true });
+  for (const name of ['Shotloom.exe', 'ffmpeg.exe', 'node.exe', 'latest.yml', 'node.exe.blockmap']) {
+    await writeFile(join(payload, name), 'application payload');
+  }
+  const directory = join(root, 'assets');
+  const manifest = await stagePlatform(root, directory, target);
+  const names = artifactNames(target);
+  assert.equal(manifest.installer, names.installer);
+  assert.equal(manifest.updater, names.updater);
+  assert.deepEqual(manifest.assets.map(asset => asset.name).sort(), [
+    names.installer, names.metadata, `${names.updater}.blockmap`,
+  ].sort());
+  for (const asset of manifest.assets) {
+    assert.equal(await sha256(join(directory, asset.name)), asset.sha256);
+  }
 }));
 
 test('stage rejects missing update metadata and a version that does not match the tag', () => fixture(async root => {
