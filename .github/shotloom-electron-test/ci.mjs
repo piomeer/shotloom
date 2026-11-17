@@ -1,9 +1,9 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { cpus, totalmem, freemem } from 'node:os';
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, lstatSync, statfsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, lstatSync, statfsSync, appendFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { requireApproval, checkSpace, parseTestSummary } from './candidate.mjs';
+import { requireApproval, checkSpace, parseTestSummary, executionModes, assertStageAllowed, assertValidationResults, BUILD_STAGES, VALIDATION_STAGES } from './candidate.mjs';
 import { createHash } from 'node:crypto';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -41,24 +41,34 @@ function check(additional = 0) {
 const npm = join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
 const command = process.argv[2];
 mkdirSync(scratch, { recursive: true });
+function results() { return readdirSync(scratch).filter(n => n.endsWith('.result.json')).map(n => JSON.parse(readFileSync(join(scratch, n), 'utf8'))); }
+try {
 if (command === 'summary') {
-  const results = readdirSync(scratch).filter(n => n.endsWith('.result.json')).map(n => JSON.parse(readFileSync(join(scratch, n), 'utf8')));
-  console.log(JSON.stringify({ results, binaryUploaded: false, candidateLaunched: false }, null, 2));
+  const records = results();
+  console.log(JSON.stringify({ results: records, fullBuildApproved: policy.fullBuildApproved, buildStagesSkippedByPolicy: policy.fullBuildApproved !== true, binaryUploaded: false, candidateLaunched: false }, null, 2));
 } else if (command === 'authorize') {
   console.log(JSON.stringify({ cpu: cpus().length, ramBytes: totalmem(), freeRamBytes: freemem(), node: process.version, versions: process.versions, disk: measurement() }, null, 2));
   assertRunner();
   const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', policy.upstreamBase, 'HEAD'], { cwd: root });
   if (ancestor.status !== 0) throw new Error('Unexpected source ancestry');
-  console.log('Cloud scope approved; fixed Node and lockfiles verified');
+  for (const [file, expected] of Object.entries(policy.sourceSha256)) {
+    const actual = createHash('sha256').update(readFileSync(join(root, file), 'utf8').replaceAll('\r\n', '\n')).digest('hex');
+    if (actual !== expected) throw new Error('Source drift: ' + file);
+  }
+  const modes = executionModes(policy);
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'build=' + modes.build + '\n');
+  console.log('Cloud validation approved; full build mode=' + modes.build);
 } else {
+  requireApproval(policy, context());
+  assertStageAllowed(policy, command);
   assertRunner();
+  if (BUILD_STAGES.includes(command)) assertValidationResults(results(), process.env.GITHUB_SHA);
   const tasks = {
     'root-deps': { args: [npm, 'ci', '--ignore-scripts', '--no-audit', '--no-fund'], extra: 2 },
     focused: { args: ['--test', 'tests/electron-recovery.test.mjs'], extra: 0.25, counts: { tests: 22, pass: 22, fail: 0, skipped: 0 } },
     typecheck: { args: [npm, 'run', 'typecheck:electron'], extra: 0.25 },
-    related: { args: ['--test', 'tests/runtime-reliability.test.mjs', 'tests/electron-runtime-boundaries.test.mjs', 'tests/electron-storage-orm.test.mjs'], extra: 0.25, counts: { tests: 22, pass: 21, fail: 0, skipped: 1 } },
+    related: { args: ['--test', 'tests/runtime-reliability.test.mjs', 'tests/electron-runtime-boundaries.test.mjs', 'tests/electron-storage-orm.test.mjs'], extra: 0.25, counts: { tests: 23, pass: 22, fail: 0, skipped: 1 } },
     architecture: { args: [npm, 'run', 'check:tests'], extra: 0.25 },
-    'electron-dist': { args: ['node_modules/electron/install.js'], extra: 2, scripts: true },
     'native-root': { args: [npm, 'rebuild', 'ffmpeg-static', '--foreground-scripts', '--no-audit', '--no-fund'], extra: 2, scripts: true },
     'host-deps': { args: [npm, 'ci', '--prefix', 'harness/host', '--no-audit', '--no-fund'], extra: 3, scripts: true },
     'director-deps': { args: [npm, 'ci', '--ignore-scripts', '--prefix', 'vendor/shotloom-director-desk', '--no-audit', '--no-fund'], extra: 0.5, scripts: true },
@@ -98,10 +108,19 @@ if (command === 'summary') {
   try { check(); } catch (error) { stopped = String(error); }
   let pass = exitCode === 0 && !stopped;
   if (task.counts && (!counts || Object.entries(task.counts).some(([k, v]) => counts[k] !== v))) pass = false;
-  const result = { stage: command, command: [process.execPath, ...task.args], node: process.version, exitCode, pass, stopped, counts, durationSeconds: (Date.now() - start) / 1000, before, after: measurement(), samples, logSha256: digest(log), log };
+  const result = { stage: command, commit: process.env.GITHUB_SHA, command: [process.execPath, ...task.args], node: process.version, exitCode, pass, stopped, counts, durationSeconds: (Date.now() - start) / 1000, before, after: measurement(), samples, logSha256: digest(log), log };
   writeFileSync(join(scratch, command + '.result.json'), JSON.stringify(result, null, 2));
   console.log(output.slice(-20000));
   console.log(JSON.stringify(result, null, 2));
   assertLocks();
   if (!pass) process.exitCode = 1;
+}
+
+} catch (error) {
+  const result = { stage: command, commit: process.env.GITHUB_SHA || null, node: process.version, exitCode: 1, pass: false, status: 'BLOCKED', reason: String(error) };
+  // Record authorization/capacity refusals even before a child starts.
+  const safeStage = ['authorize', ...VALIDATION_STAGES, ...BUILD_STAGES].includes(command) ? command : 'invalid-stage';
+  writeFileSync(join(scratch, safeStage + '.result.json'), JSON.stringify(result, null, 2));
+  console.error(JSON.stringify(result, null, 2));
+  process.exitCode = 1;
 }

@@ -16,10 +16,10 @@ for (const id of ['../production', 'batch09-../x', '', 'com.shotloom.app']) {
 }
 test('cloud approval is false by default and scope is fork/branch-specific', () => {
   const c = { repository: 'piomeer/shotloom', ref: 'refs/heads/test/windows-electron-candidate', event: 'push' };
-  assert.throws(() => requireApproval({ cloudExecutionApproved: false }, c), /not authorized/);
-  assert.equal(requireApproval({ cloudExecutionApproved: true }, c), true);
+  assert.throws(() => requireApproval({ validationExecutionApproved: false }, c), /not authorized/);
+  assert.equal(requireApproval({ validationExecutionApproved: true }, c), true);
   for (const override of [{ repository: 'AstralFoundry/shotloom' }, { ref: 'refs/heads/main' }, { event: 'workflow_dispatch' }]) {
-    assert.throws(() => requireApproval({ cloudExecutionApproved: true }, { ...c, ...override }), /scope/);
+    assert.throws(() => requireApproval({ validationExecutionApproved: true }, { ...c, ...override }), /scope/);
   }
 });
 test('space sampling has no prerequisite but stage boundaries retain reserve plus incremental budget', () => {
@@ -37,7 +37,7 @@ test('candidate transforms are narrowly anchored, disable updater and force dir/
     main: "import { app } from 'electron';\napp.setName('Shotloom');",
     paths: "export const APP_IDENTIFIER = 'com.shotloom.app';",
     updater: 'original updater',
-    packaging: "export async function packageElectron({ dirOnly = CLI_ONLY_DIR() } = {}) {\nconst artifacts = await electronBuild({ projectDir: rootDir, ...(dirOnly ? { dir: true } : {}) });\n}",
+    packaging: "export async function packageElectron({ dirOnly = CLI_ONLY_DIR() } = {}) {\nconst artifacts = await electronBuild({ projectDir: rootDir, publish: 'never', ...signing, ...(dirOnly ? { dir: true } : {}) });\n}",
   };
   const t = transformSources(s, 'disabled updater');
   assert.ok(t.main.startsWith("import './candidate-isolation';"));
@@ -94,4 +94,79 @@ test('authorized mocked runtime sets all Electron paths before product imports',
   assert.equal(f.env.HOME, f.p.profile);
   assert.equal(f.env.TEMP, f.p.temp);
   assert.match(f.env.SHOTLOOM_WINDOW, /Shotloom Local Test/);
+});
+
+// BATCH-10 behavior regressions: no cloud execution or product build is performed.
+import * as candidateApi from './candidate.mjs';
+
+test('validation and full build have independent fail-closed approvals', () => {
+  assert.equal(typeof candidateApi.executionModes, 'function');
+  const base = { validationExecutionApproved: false, fullBuildApproved: false, dependencyScriptsReviewed: false, candidatePackagingApproved: false };
+  assert.deepEqual(candidateApi.executionModes(base), { validation: false, build: false });
+  assert.deepEqual(candidateApi.executionModes({ ...base, validationExecutionApproved: true }), { validation: true, build: false });
+  assert.throws(() => candidateApi.executionModes({ ...base, fullBuildApproved: true }), /validation/);
+  assert.throws(() => candidateApi.executionModes({ ...base, validationExecutionApproved: true, fullBuildApproved: true }), /scripts/);
+  assert.deepEqual(candidateApi.executionModes({ ...base, validationExecutionApproved: true, fullBuildApproved: true, dependencyScriptsReviewed: true, candidatePackagingApproved: true }), { validation: true, build: true });
+});
+
+test('build stage approval cannot be bypassed by invoking ci stage directly', () => {
+  assert.equal(typeof candidateApi.assertStageAllowed, 'function');
+  const p = { validationExecutionApproved: true, fullBuildApproved: false };
+  assert.equal(candidateApi.assertStageAllowed(p, 'focused'), true);
+  assert.throws(() => candidateApi.assertStageAllowed(p, 'package'), /build/);
+  assert.throws(() => candidateApi.assertStageAllowed(p, 'unknown'), /Unknown/);
+});
+
+test('packaging requires current Node22 validation evidence, not stale or failed results', () => {
+  assert.equal(typeof candidateApi.assertValidationResults, 'function');
+  const sha = 'abc';
+  const results = ['focused', 'typecheck', 'related', 'architecture'].map(stage => ({ stage, pass: true, exitCode: 0, node: 'v22.19.0', commit: sha }));
+  assert.equal(candidateApi.assertValidationResults(results, sha), true);
+  for (const edit of [{ pass: false }, { exitCode: 1 }, { node: 'v24.15.0' }, { commit: 'stale' }]) {
+    assert.throws(() => candidateApi.assertValidationResults([{ ...results[0], ...edit }, ...results.slice(1)], sha), /validation/);
+  }
+  assert.throws(() => candidateApi.assertValidationResults(results.slice(1), sha), /validation/);
+});
+
+test('latest upstream packaging keeps its one runtime install and new error handling', async () => {
+  const source = {
+    main: readFileSync(new URL('../../electron/main.ts', import.meta.url), 'utf8'),
+    paths: readFileSync(new URL('../../electron/core/paths.ts', import.meta.url), 'utf8'),
+    updater: 'original',
+    packaging: readFileSync(new URL('../../scripts/electron-package.mjs', import.meta.url), 'utf8'),
+  };
+  const text = transformSources(source, 'disabled').packaging;
+  const calls = [];
+  const body = text.replace(/^import .*;\r?$/gm, '').replace('export async function', 'async function').replaceAll('import.meta.url', JSON.stringify('file:///candidate/scripts/electron-package.mjs'));
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  const module = new AsyncFunction('electronBuild', 'spawnSync', 'dirname', 'fileURLToPath', 'createRequire', 'buildElectron', 'process',
+    body + '\nreturn packageElectron;');
+  const fakeProcess = { execPath: 'node.exe', platform: 'win32', argv: ['node', 'not-this-module'], env: { npm_execpath: 'npm-cli.js' } };
+  const fn = await module(async options => { calls.push(['builder', options]); return ['directory']; },
+    (...args) => { calls.push(['spawn', ...args]); return { status: 0 }; },
+    () => '/candidate', () => '/candidate/scripts/electron-package.mjs',
+    () => ({ resolve: () => '/candidate/node_modules/electron/install.js' }),
+    async () => { calls.push(['main']); }, fakeProcess);
+  assert.deepEqual(await fn({ dirOnly: true }), ['directory']);
+  assert.equal(calls.filter(c => c[0] === 'spawn' && c[2][0].endsWith('electron/install.js')).length, 1);
+  assert.deepEqual(calls.filter(c => c[0] === 'spawn').slice(1).map(c => c[2]), [['npm-cli.js', 'run', 'build'], ['npm-cli.js', 'run', 'prepare:media']]);
+  assert.deepEqual(calls.at(-1), ['builder', { projectDir: '/candidate', config: '/candidate/tmp/batch09/electron-builder.json', publish: 'never', dir: true }]);
+  calls.length = 0;
+  await assert.rejects(fn({ dirOnly: false }), /directory only/);
+  assert.equal(calls.length, 0);
+});
+
+test('workflow skips every build step normally in validation-only mode', () => {
+  const w = JSON.parse(readFileSync(new URL('../workflows/windows-electron-candidate.yml', import.meta.url), 'utf8'));
+  const steps = w.jobs.candidate.steps;
+  const modes = candidateApi.executionModes({ validationExecutionApproved: true, fullBuildApproved: false });
+  const scheduled = steps.filter(step => !step.if || step.if === 'always()' || modes.build).map(step => step.run).filter(Boolean);
+  assert.deepEqual(scheduled.filter(cmd => /ci.mjs (root-deps|focused|typecheck|related|architecture)$/.test(cmd)).map(cmd => cmd.split(' ').at(-1)), ['root-deps', 'focused', 'typecheck', 'related', 'architecture']);
+  for (const stage of candidateApi.BUILD_STAGES) {
+    const step = steps.find(item => item.run?.endsWith(' ' + stage));
+    assert.equal(step.if, "steps.approval.outputs.build == 'true'");
+    assert.ok(!scheduled.includes(step.run));
+  }
+  assert.ok(!JSON.stringify(w).includes('electron-dist'));
+  assert.equal(scheduled.at(-1), 'node .github/shotloom-electron-test/ci.mjs summary');
 });

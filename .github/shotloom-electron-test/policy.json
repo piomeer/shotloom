@@ -1,8 +1,7 @@
 {
-  "schemaVersion": 1,
-  "upstreamBase": "9f33bd92ba55fbd8749c4849e8df9cedae9aa471",
+  "schemaVersion": 2,
+  "upstreamBase": "332f42238ddf46955c18a835340a76c083a94553",
   "contributionCommit": "4f0e89b65e8d3f364e767029ff9e5f4127c2f8b2",
-  "cloudExecutionApproved": false,
   "dependencyScriptsReviewed": false,
   "candidatePackagingApproved": false,
   "localRunAuthorized": false,
@@ -25,6 +24,20 @@
     "electron/main.ts": "4d7c9a4aa2e1533f0b161dfa05bc3bb2c19ae881439d2d7666b8e5e8d2c06d13",
     "electron/core/paths.ts": "2b1c5d8ee3d9a12a61890d7e1251ae3a2965f31975fe0514fb184d2475fa4f4f",
     "electron/core/updater.ts": "d4388d68b122530a796096c4bcb5d37f8c60e3a92df83e5698aa5c6f6e116751",
-    "scripts/electron-package.mjs": "3210a229b7bd86b58942acf948486cba03066a6f0f164dbd4bf94622bd90ecdf"
-  }
+    "scripts/electron-package.mjs": "0eef3ce8969827d9a889aaf898d26eda5583b85c758dab8739e816bc8b6c94e9",
+    "scripts/prepare-harness.mjs": "d7574cf7e54a0d36712d56c3e54b8136c1da19cf68c4afea8f6873a3dcd43a17",
+    "scripts/electron-after-pack.mjs": "76cf95571fb294139a9929e0b723db971277a00b86049205e9acc6c3a6de6dc9",
+    "electron-builder.yml": "7fa000e5b64db895a0e57af56f74ceb6668d114afab10368ee6252f922203b9d",
+    "scripts/build-electron.mjs": "c53dfc4f1a420e18eb5c658c8045d4ccab663222f617883a38c64bd1085aa9af",
+    "scripts/prepare-openreel-agent.mjs": "7b4cbbd70e0883291b945c0eb11f8a61ebf6926f3d1581bc01ddd11ef72b1480",
+    "scripts/prepare-openreel.mjs": "3eb168715cdbaca53f03aee3e72b65df73c88e3269ea07b09f034f7c20b9c989",
+    "scripts/prepare-director-desk.mjs": "889e2f8e4f9877e4dde458b3abd6749c78e07980663c14ab753374c069a2cf4f",
+    "scripts/prepare-media-sidecar.mjs": "9c015e24071f849d853183116e09f7019d2a52d6347fdc749cddfc4921c45d2a",
+    "electron/core/recovery.ts": "b42705bfdfcf9d8e56d236beeec7e78751b42ee29a898094b9b19f4af34f63dc",
+    "tests/electron-recovery.test.mjs": "ad50bf94b4dc7d236946fd41c2614f7ce15c4846b8501afc236fe1c716df2947",
+    ".github/workflows/verify.yml": "58030e0b947c5bc7f506651ed17cb8fde0ccae6f15a3db17a43652c2178aed3e",
+    "package.json": "e9b27947a307e32d3a29cef4480352998174b41a129a5538e2aa63db2fd4fdda"
+  },
+  "validationExecutionApproved": false,
+  "fullBuildApproved": false
 }

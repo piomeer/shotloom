@@ -16,7 +16,32 @@ export function planPaths(base, runId) {
 }
 export function requireApproval(policy, context) {
   if (context.repository !== 'piomeer/shotloom' || context.ref !== 'refs/heads/test/windows-electron-candidate' || context.event !== 'push') throw new Error('Wrong cloud scope');
-  if (policy.cloudExecutionApproved !== true) throw new Error('Cloud execution not authorized');
+  if (policy.validationExecutionApproved !== true) throw new Error('Cloud validation not authorized');
+  executionModes(policy);
+  return true;
+}
+export const VALIDATION_STAGES = ['root-deps', 'focused', 'typecheck', 'related', 'architecture'];
+export const BUILD_STAGES = ['native-root', 'host-deps', 'director-deps', 'openreel', 'prepare', 'candidate-typecheck', 'package', 'resources'];
+export function executionModes(policy) {
+  const validation = policy.validationExecutionApproved === true;
+  const build = policy.fullBuildApproved === true;
+  if (build && !validation) throw new Error('Full build requires validation approval');
+  if (build && (policy.dependencyScriptsReviewed !== true || policy.candidatePackagingApproved !== true)) throw new Error('Full build requires reviewed scripts and packaging approval');
+  return { validation, build };
+}
+export function assertStageAllowed(policy, stage) {
+  if (!VALIDATION_STAGES.includes(stage) && !BUILD_STAGES.includes(stage)) throw new Error('Unknown stage');
+  const modes = executionModes(policy);
+  if (!modes.validation) throw new Error('Cloud validation not authorized');
+  if (BUILD_STAGES.includes(stage) && !modes.build) throw new Error('Full build not authorized');
+  return true;
+}
+export function assertValidationResults(results, commit) {
+  if (!commit) throw new Error('Missing validation commit');
+  for (const stage of ['focused', 'typecheck', 'related', 'architecture']) {
+    const result = results.find(item => item.stage === stage);
+    if (!result || !result.pass || result.exitCode !== 0 || result.node !== 'v22.19.0' || result.commit !== commit) throw new Error('Missing, failed or stale Node22 validation: ' + stage);
+  }
   return true;
 }
 export function checkSpace({ free, used, reserve, additional, cap }) {
@@ -45,7 +70,7 @@ export function transformSources(source, disabledUpdater) {
     packaging: replaceOnce(replaceOnce(source.packaging,
       'export async function packageElectron({ dirOnly = CLI_ONLY_DIR() } = {}) {',
       "export async function packageElectron({ dirOnly = CLI_ONLY_DIR() } = {}) {\n  if (!dirOnly) throw new Error('Candidate supports directory only');"),
-      'const artifacts = await electronBuild({ projectDir: rootDir, ...(dirOnly ? { dir: true } : {}) });',
+      "const artifacts = await electronBuild({ projectDir: rootDir, publish: 'never', ...signing, ...(dirOnly ? { dir: true } : {}) });",
       "const artifacts = await electronBuild({ projectDir: rootDir, config: rootDir + '/tmp/batch09/electron-builder.json', publish: 'never', dir: true });"),
   };
 }
