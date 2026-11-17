@@ -38,6 +38,6 @@
     ".github/workflows/verify.yml": "58030e0b947c5bc7f506651ed17cb8fde0ccae6f15a3db17a43652c2178aed3e",
     "package.json": "e9b27947a307e32d3a29cef4480352998174b41a129a5538e2aa63db2fd4fdda"
   },
-  "validationExecutionApproved": false,
+  "validationExecutionApproved": true,
   "fullBuildApproved": false
 }
