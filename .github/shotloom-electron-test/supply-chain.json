@@ -1,0 +1,29 @@
+{
+  "ffmpegPackage": {
+    "name": "ffmpeg-static",
+    "version": "5.3.0",
+    "release": "b6.1.1"
+  },
+  "ffmpegGzip": {
+    "url": "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/ffmpeg-win32-x64.gz",
+    "bytes": 29581307,
+    "sha256": "8883a3dffbd0a16cf4ef95206ea05283f78908dbfb118f73c83f4951dcc06d77"
+  },
+  "ffmpegExecutable": {
+    "bytes": 82797568,
+    "sha256": "04e1307997530f9cf2fe35cba2ca7e8875ca91da02f89d6c7243df819c94ad00"
+  },
+  "pnpm": {
+    "name": "pnpm",
+    "version": "11.7.0",
+    "url": "https://registry.npmjs.org/pnpm/-/pnpm-11.7.0.tgz",
+    "bytes": 4590455,
+    "integrity": "sha512-GcyFLBIMcSV2DyRD7mvgyltA+fUFmN4aCaHxd1A+AQ5Xwjx3ZG4B52HeWb+HT7IqM5jDOrlpH8E+uUa28PTWIA==",
+    "sha256": "deafa7ec98a1218b6a047289b92fbe2395c1e22d3495bb711653013218ee15ee"
+  },
+  "pnpmBootstrapSha256": {
+    "package.json": "2b20455ee8d69d072df339bf9851edea94ee08a9ea14db9289a7fca0bbb7abb0",
+    "bin/pnpm.mjs": "ff3224d46b47fbb24a7e9fe15fededef7e00892d07d4e376b6762d4899906bfd",
+    "dist/pnpm.mjs": "d3a7f4bde2f32c5acc5f012d1edc24c24ea247c2f6c8823146f8cd69ed70b22f"
+  }
+}

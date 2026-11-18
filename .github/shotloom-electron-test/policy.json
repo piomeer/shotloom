@@ -39,5 +39,6 @@
     "package.json": "e9b27947a307e32d3a29cef4480352998174b41a129a5538e2aa63db2fd4fdda"
   },
   "validationExecutionApproved": true,
-  "fullBuildApproved": false
+  "fullBuildApproved": false,
+  "textEvidenceUploadApproved": false
 }

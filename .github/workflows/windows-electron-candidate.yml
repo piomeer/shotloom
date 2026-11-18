@@ -38,7 +38,13 @@
         "ELECTRON_BUILDER_CACHE": "${{ github.workspace }}\\tmp\\batch09\\builder-cache",
         "TEMP": "${{ github.workspace }}\\tmp\\batch09\\temp",
         "TMP": "${{ github.workspace }}\\tmp\\batch09\\temp",
-        "electron_config_cache": "${{ github.workspace }}\\tmp\\batch09\\electron-cache"
+        "electron_config_cache": "${{ github.workspace }}\\tmp\\batch09\\electron-cache",
+        "LOCALAPPDATA": "${{ github.workspace }}\\tmp\\batch09\\profile\\local",
+        "APPDATA": "${{ github.workspace }}\\tmp\\batch09\\profile\\roaming",
+        "NODE_COMPILE_CACHE": "${{ github.workspace }}\\tmp\\batch09\\node-compile-cache",
+        "npm_config_userconfig": "${{ github.workspace }}\\tmp\\batch09\\npmrc",
+        "SHOTLOOM_PNPM": "\"${{ github.workspace }}\\tmp\\batch09\\pnpm.cmd\"",
+        "FFMPEG_BIN": "${{ github.workspace }}\\node_modules\\ffmpeg-static\\ffmpeg.exe"
       },
       "steps": [
         {
@@ -127,6 +133,23 @@
           "name": "BUILD: Inspect complete resource closure and local SHA256 manifest",
           "run": "node .github/shotloom-electron-test/ci.mjs resources",
           "if": "steps.approval.outputs.build == 'true'"
+        },
+        {
+          "name": "EVIDENCE: Validate the two authorized text files only",
+          "if": "steps.approval.outputs.build == 'true' && steps.approval.outputs.text == 'true'",
+          "run": "node .github/shotloom-electron-test/ci.mjs evidence"
+        },
+        {
+          "name": "EVIDENCE: Separately authorized JSON metadata only",
+          "if": "steps.approval.outputs.build == 'true' && steps.approval.outputs.text == 'true'",
+          "uses": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+          "with": {
+            "name": "candidate-text-evidence",
+            "path": "${{ github.workspace }}/tmp/batch09/text-evidence/candidate-summary.json\n${{ github.workspace }}/tmp/batch09/text-evidence/candidate-manifest.json",
+            "retention-days": 1,
+            "include-hidden-files": false,
+            "if-no-files-found": "error"
+          }
         },
         {
           "name": "Print sanitized validation summary only",

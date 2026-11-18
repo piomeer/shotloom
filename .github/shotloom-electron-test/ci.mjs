@@ -1,28 +1,19 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { cpus, totalmem, freemem } from 'node:os';
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, lstatSync, statfsSync, appendFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, appendFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { requireApproval, checkSpace, parseTestSummary, executionModes, assertStageAllowed, assertValidationResults, BUILD_STAGES, VALIDATION_STAGES } from './candidate.mjs';
+import { requireApproval, parseTestSummary, executionModes, assertStageAllowed, assertValidationResults, BUILD_STAGES, VALIDATION_STAGES } from './candidate.mjs';
 import { createHash } from 'node:crypto';
+import { measureWorkspace, assertMeasurement, cacheEnvironment, assertCacheEnvironment, prepareTextEvidence, readEvidenceFile } from './audit-tools.mjs';
+import { verifyFfmpegFile } from './controlled-deps.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const scratch = join(root, 'tmp/batch09');
 const policy = JSON.parse(readFileSync(join(root, '.github/shotloom-electron-test/policy.json'), 'utf8'));
-const GiB = 1024 ** 3;
 function digest(path) { return createHash('sha256').update(readFileSync(path)).digest('hex'); }
-function used(path) {
-  let bytes = 0;
-  for (const item of readdirSync(path, { withFileTypes: true })) {
-    if (item.isSymbolicLink()) continue;
-    const file = join(path, item.name);
-    bytes += item.isDirectory() ? used(file) : lstatSync(file).size;
-  }
-  return bytes;
-}
 function measurement() {
-  const disk = statfsSync(root);
-  return { free: Number(disk.bavail) * Number(disk.bsize), used: used(root) };
+  return measureWorkspace(root, process.env.GITHUB_ACTIONS === 'true' ? [process.env.RUNNER_TOOL_CACHE] : []);
 }
 function assertLocks() {
   for (const [file, expected] of Object.entries(policy.lockSha256)) if (createHash('sha256').update(readFileSync(join(root, file), 'utf8').replaceAll('\r\n', '\n')).digest('hex') !== expected) throw new Error('Lock drift: ' + file);
@@ -32,10 +23,11 @@ function assertRunner() {
   requireApproval(policy, context());
   if (process.platform !== 'win32' || process.arch !== 'x64' || process.versions.node !== '22.19.0' || readFileSync(join(root, '.node-version'), 'utf8').trim() !== '22.19.0') throw new Error('Wrong Windows/Node target');
   assertLocks();
+  assertCacheEnvironment(root, process.env);
 }
 function check(additional = 0) {
   const m = measurement();
-  checkSpace({ ...m, reserve: policy.diskReserveGiB * GiB, additional: additional * GiB, cap: policy.workspaceCapGiB * GiB });
+  assertMeasurement(m, policy, additional);
   return m;
 }
 const npm = join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
@@ -45,7 +37,9 @@ function results() { return readdirSync(scratch).filter(n => n.endsWith('.result
 try {
 if (command === 'summary') {
   const records = results();
-  console.log(JSON.stringify({ results: records, fullBuildApproved: policy.fullBuildApproved, buildStagesSkippedByPolicy: policy.fullBuildApproved !== true, binaryUploaded: false, candidateLaunched: false }, null, 2));
+  console.log(JSON.stringify({ results: records, fullBuildApproved: policy.fullBuildApproved, buildStagesSkippedByPolicy: policy.fullBuildApproved !== true, textEvidenceUploadApproved: policy.textEvidenceUploadApproved === true, binaryUploaded: false, candidateLaunched: false }, null, 2));
+  const summary = join(root, 'release/batch09/candidate-summary.json');
+  if (existsSync(summary)) console.log('CANDIDATE_SUMMARY_JSON=' + readEvidenceFile(root, summary).replaceAll('\n', ''));
 } else if (command === 'authorize') {
   console.log(JSON.stringify({ cpu: cpus().length, ramBytes: totalmem(), freeRamBytes: freemem(), node: process.version, versions: process.versions, disk: measurement() }, null, 2));
   assertRunner();
@@ -56,8 +50,15 @@ if (command === 'summary') {
     if (actual !== expected) throw new Error('Source drift: ' + file);
   }
   const modes = executionModes(policy);
-  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'build=' + modes.build + '\n');
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'build=' + modes.build + '\n' + 'text=' + (modes.build && policy.textEvidenceUploadApproved === true) + '\n');
   console.log('Cloud validation approved; full build mode=' + modes.build);
+} else if (command === 'evidence') {
+  assertRunner();
+  assertStageAllowed(policy, 'resources');
+  assertValidationResults(results(), process.env.GITHUB_SHA);
+  const completed = results().find(r => r.stage === 'resources');
+  if (!completed?.pass || completed.commit !== process.env.GITHUB_SHA) throw new Error('Missing current resource evidence');
+  console.log(JSON.stringify({ textEvidence: prepareTextEvidence(root, policy).map(p => p.slice(root.length + 1)), binaryUploaded: false }));
 } else {
   requireApproval(policy, context());
   assertStageAllowed(policy, command);
@@ -69,10 +70,10 @@ if (command === 'summary') {
     typecheck: { args: [npm, 'run', 'typecheck:electron'], extra: 0.25 },
     related: { args: ['--test', 'tests/runtime-reliability.test.mjs', 'tests/electron-runtime-boundaries.test.mjs', 'tests/electron-storage-orm.test.mjs'], extra: 0.25, counts: { tests: 23, pass: 22, fail: 0, skipped: 1 } },
     architecture: { args: [npm, 'run', 'check:tests'], extra: 0.25 },
-    'native-root': { args: [npm, 'rebuild', 'ffmpeg-static', '--foreground-scripts', '--no-audit', '--no-fund'], extra: 2, scripts: true },
-    'host-deps': { args: [npm, 'ci', '--prefix', 'harness/host', '--no-audit', '--no-fund'], extra: 3, scripts: true },
+    'native-root': { args: ['.github/shotloom-electron-test/controlled-deps.mjs', 'ffmpeg'], extra: 2, scripts: true },
+    'host-deps': { args: ['.github/shotloom-electron-test/controlled-deps.mjs', 'host'], extra: 3, scripts: true },
     'director-deps': { args: [npm, 'ci', '--ignore-scripts', '--prefix', 'vendor/shotloom-director-desk', '--no-audit', '--no-fund'], extra: 0.5, scripts: true },
-    openreel: { args: ['scripts/prepare-openreel-agent.mjs'], extra: 3, scripts: true },
+    openreel: { args: ['.github/shotloom-electron-test/controlled-deps.mjs', 'openreel'], extra: 3, scripts: true },
     prepare: { args: ['.github/shotloom-electron-test/prepare.mjs'], extra: 0.25, scripts: true },
     'candidate-typecheck': { args: [npm, 'run', 'typecheck:electron'], extra: 0.25, scripts: true },
     package: { args: [npm, 'run', 'dist:electron', '--', '--dir'], extra: 3, scripts: true },
@@ -81,9 +82,13 @@ if (command === 'summary') {
   const task = tasks[command];
   if (!task) throw new Error('Unknown stage');
   if (task.scripts && (!policy.dependencyScriptsReviewed || !policy.candidatePackagingApproved)) throw new Error('BLOCKED: native/vendor scripts and packaging require separate approval');
+  if (command === 'package') {
+    verifyFfmpegFile(join(root, 'node_modules/ffmpeg-static/ffmpeg.exe'));
+    verifyFfmpegFile(join(root, 'electron/resources/ffmpeg.exe'));
+  }
   const before = check(task.extra);
   console.log(JSON.stringify({ stage: command, before, node: process.version, npm: spawnSync(process.execPath, [npm, '--version'], { encoding: 'utf8' }).stdout.trim() }));
-  const env = { ...process.env, npm_config_ignore_scripts: task.scripts ? 'false' : 'true' };
+  const env = { ...process.env, ...cacheEnvironment(root), npm_config_ignore_scripts: task.scripts ? 'false' : 'true' };
   if (task.scripts) delete env.ELECTRON_SKIP_BINARY_DOWNLOAD;
   const log = join(scratch, command + '.log');
   const { createWriteStream } = await import('node:fs');
@@ -111,6 +116,7 @@ if (command === 'summary') {
   const result = { stage: command, commit: process.env.GITHUB_SHA, command: [process.execPath, ...task.args], node: process.version, exitCode, pass, stopped, counts, durationSeconds: (Date.now() - start) / 1000, before, after: measurement(), samples, logSha256: digest(log), log };
   writeFileSync(join(scratch, command + '.result.json'), JSON.stringify(result, null, 2));
   console.log(output.slice(-20000));
+  if (command === 'resources' && pass) console.log('CANDIDATE_SUMMARY_JSON=' + readEvidenceFile(root, join(root, 'release/batch09/candidate-summary.json')).replaceAll('\n', ''));
   console.log(JSON.stringify(result, null, 2));
   assertLocks();
   if (!pass) process.exitCode = 1;

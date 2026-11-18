@@ -16,3 +16,7 @@ $taskSdk = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Windows 
 if(Test-Path -LiteralPath $taskSdk) { Get-ChildItem -LiteralPath $taskSdk -Directory | Select-Object Name | ConvertTo-Json -Compress }
 git rev-parse HEAD
 # No capacity threshold: inventory must run even when later stages are BLOCKED.
+
+# Directory accounting does not impose capacity gates on inventory.
+& node --input-type=module -e "import { measureWorkspace } from './.github/shotloom-electron-test/audit-tools.mjs'; console.log(JSON.stringify(measureWorkspace(process.env.GITHUB_WORKSPACE, [process.env.RUNNER_TOOL_CACHE])));"
+if($LASTEXITCODE -ne 0) { throw 'Directory inventory failed' }
