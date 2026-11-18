@@ -2,8 +2,8 @@
   "schemaVersion": 2,
   "upstreamBase": "332f42238ddf46955c18a835340a76c083a94553",
   "contributionCommit": "4f0e89b65e8d3f364e767029ff9e5f4127c2f8b2",
-  "dependencyScriptsReviewed": false,
-  "candidatePackagingApproved": false,
+  "dependencyScriptsReviewed": true,
+  "candidatePackagingApproved": true,
   "localRunAuthorized": false,
   "binaryUploadAuthorized": false,
   "applicationId": "com.shotloom.localtest.batch09",
@@ -39,6 +39,6 @@
     "package.json": "e9b27947a307e32d3a29cef4480352998174b41a129a5538e2aa63db2fd4fdda"
   },
   "validationExecutionApproved": true,
-  "fullBuildApproved": false,
-  "textEvidenceUploadApproved": false
+  "fullBuildApproved": true,
+  "textEvidenceUploadApproved": true
 }
